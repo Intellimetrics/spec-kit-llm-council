@@ -48,6 +48,19 @@ When an AI agent writes a plan and then implements that plan, errors compound si
 
 A panel of models — with different training data, different priors, different failure modes — catches things one model misses. That's the value of the jury pattern at decision-point gates, rather than as a general code-review tool.
 
+## Limitations (read this before you trust a verdict)
+
+**The jurors are correlated.** Claude, Codex, Gemini, and most OpenRouter peers were trained on overlapping corpora and shaped by similar RLHF objectives. When they all agree, that is *some* signal — but it is not independent evidence in the statistical sense. Frontier models can share blind spots, especially on novel architectural patterns, recently-published libraries, or domain-specific conventions outside their common training distribution.
+
+Practical consequences:
+
+- **Unanimous agreement is weak proof.** A 4-of-4 `yes` verdict is more reassuring than a single model's opinion, but treat it as "no obvious flaws caught by similar models" rather than "this is correct." A careful human read of the verdict still matters.
+- **Disagreement is the more interesting signal.** A `tradeoff` outcome with peers split is often where the council adds the most value — the dissent forces you to re-examine the decision.
+- **Use `mode: diverse` when you specifically want decorrelation.** llm-council's `diverse` mode curates participants from different model labs to spread the priors as much as the participant pool allows.
+- **Track empirical disagreement.** Run `llm-council stats` after a few feature cycles to see how often your peers actually labeled differently in your project. If they agreed on every verdict you've recorded, the council is not adding signal beyond what one of them would give you — drop down to a single judge or `mode: review-cheap` and save the spend.
+
+The council is most useful where the cost of being wrong is high enough that even correlated review beats no review, and where the dissent (when it appears) is itself the deliverable. It is not a substitute for human judgment.
+
 ## Install
 
 You'll install two things: the `llm-council` tool itself, and this Spec Kit extension that wires it into your project.
@@ -222,7 +235,7 @@ quorum: 4
 participants: [claude, codex, gemini, deepseek_v4_pro]
 mode: plan
 transcript: .llm-council/runs/20260504_050434_plan-review.md
-extension_version: 0.2.0
+extension_version: 0.3.1
 timestamp: 2026-05-04T05:04:34Z
 ---
 ```
