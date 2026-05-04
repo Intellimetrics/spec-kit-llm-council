@@ -1,0 +1,44 @@
+schema_version: "1.0"
+
+extension:
+  id: "llm-council"
+  name: "LLM Council"
+  version: "0.1.0"
+  description: "Multi-LLM consensus jury for Spec-Driven Development. Convenes a parallel jury of models to vote on plan.md before task generation; records an advisory verdict as evidence."
+  author: "Chad Lindell"
+  repository: "https://github.com/Intellimetrics/spec-kit-llm-council"
+  license: "MIT"
+  homepage: "https://github.com/Intellimetrics/spec-kit-llm-council"
+
+requires:
+  speckit_version: ">=0.2.0"
+  tools:
+    - name: "llm-council"
+      version: ">=0.4.2"
+      required: true
+
+provides:
+  commands:
+    - name: "speckit.llm-council.plan-review"
+      file: "commands/speckit.llm-council.plan-review.md"
+      description: "Convene a multi-LLM jury to review the active feature's plan.md and record an advisory verdict"
+
+  config:
+    - name: "llm-council-config.yml"
+      template: "config-template.yml"
+      description: "Council mode, cost cap, peer overrides, and evidence path"
+      required: false
+
+hooks:
+  before_tasks:
+    command: speckit.llm-council.plan-review
+    optional: true
+    prompt: "Convene LLM council to review the plan before task generation?"
+    description: "Multi-model consensus review of plan.md before /speckit.tasks"
+
+tags:
+  - "review"
+  - "consensus"
+  - "multi-llm"
+  - "governance"
+  - "code"

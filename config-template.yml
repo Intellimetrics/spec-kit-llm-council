@@ -1,0 +1,45 @@
+# LLM Council extension configuration
+# Copied to .specify/extensions/llm-council/llm-council-config.yml on install.
+
+# Council mode passed to llm-council. Run `llm-council list` to see every mode
+# available in your environment. Common picks:
+#   plan           Premium peers for independent planning (recommended default).
+#   review-cheap   Budget OpenRouter peers; trades fidelity for cost.
+#   diverse        Cross-lab planning diversity.
+#   private-local  Ollama-backed local peers only — nothing leaves the machine.
+#   us-only        Restrict to US-origin native CLIs.
+mode: plan
+
+# Hard cost ceiling per gate, in USD. Council refuses to run if pre-flight estimate
+# exceeds this. Free / local peers count as $0. Set to 0 to disable (not recommended
+# when hosted-model peers are in the jury).
+max_cost_usd: 0.50
+
+# Override participants. Empty list = use the mode's default participant set.
+# The council is bring-your-own-models: any combination of native CLIs (claude,
+# codex, gemini), OpenRouter peers (deepseek_v4_pro, qwen_coder_plus, etc.),
+# and local Ollama peers (local_qwen_coder, ...) is valid. Run `llm-council list`
+# to see every participant currently configured.
+#
+# Examples:
+#   ["claude"]                              # single judge — advisory, no consensus
+#   ["claude", "codex", "gemini"]           # native CLIs only
+#   ["claude", "qwen_coder_free"]           # mix CLI + free OpenRouter peer
+#   ["local_qwen_coder", "local_llama3"]    # fully offline jury
+participants: []
+
+# Files included in the council prompt, relative to the active feature directory
+# unless they start with `.specify/` (which resolves from repo root). Missing files
+# are silently skipped. plan.md is always included whether or not it appears here.
+inputs:
+  - spec.md
+  - plan.md
+  - .specify/memory/constitution.md
+
+# Where to write the evidence artifact. Path is relative to repo root.
+# `{feature}` is substituted with the active feature slug.
+evidence_path: ".specify/council/{feature}/plan-review.md"
+
+# Surface the verdict to the user before /speckit.tasks proceeds.
+# Advisory only — never blocks. Set to false to suppress the user-facing summary.
+prompt_user: true
