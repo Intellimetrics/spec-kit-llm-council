@@ -117,7 +117,8 @@ Before writing, resolve these placeholders in the template below:
 - `<feature>` — the resolved feature slug from Step 1
 - `<extension_version>` — the value of `extension.version` from `.specify/extensions/llm-council/extension.yml` (read at runtime, do not hardcode)
 - `<ISO-8601 UTC>` — the current UTC time in ISO-8601 (e.g., `2026-05-04T05:04:34Z`)
-- All `<...>` fields without literal angle brackets in the YAML below
+- `peer_labels:` — for each participant in the council run, write one mapping entry. The value is the peer's recommendation label (`"yes"` / `"no"` / `"tradeoff"`) if the peer succeeded and produced a label; otherwise write `"unlabeled"` (peer succeeded but no recognizable label), `"timeout"` (peer timed out), or `"error"` (any other failure). **Always write values as quoted strings** — bare `yes` and `no` are YAML booleans and will deserialize as `True`/`False` in most parsers. Do NOT omit failed peers — recording them is the point.
+- All other `<...>` fields without literal angle brackets in the YAML below
 
 Format:
 
@@ -125,9 +126,14 @@ Format:
 ---
 feature: <feature>
 gate: before_tasks
-council_label: yes | no | tradeoff | degraded
+council_label: "yes" | "no" | "tradeoff" | "degraded"   # always quote; bare yes/no are YAML booleans
 quorum: <int>
 participants: [claude, codex, gemini, ...]
+peer_labels:
+  claude: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  codex: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  gemini: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  # ... one entry per participant; quote every value
 mode: <mode>
 transcript: <path under .llm-council/runs/>
 extension_version: <extension_version>

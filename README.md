@@ -229,16 +229,25 @@ Each gate writes to its own evidence file under `.specify/council/<feature>/`:
 ```yaml
 ---
 feature: 003-user-auth
-gate: before_tasks                          # or before_implement
-council_label: yes | no | tradeoff | degraded
-quorum: 4
+gate: before_tasks                          # or after_specify, before_implement, audit
+council_label: "tradeoff"                   # "yes" | "no" | "tradeoff" | "degraded"
+quorum: 3
 participants: [claude, codex, gemini, deepseek_v4_pro]
+peer_labels:                                # added in v0.3.2 — lets you measure dissent
+  claude: "yes"
+  codex: "tradeoff"
+  gemini: "no"
+  deepseek_v4_pro: "timeout"
 mode: plan
 transcript: .llm-council/runs/20260504_050434_plan-review.md
-extension_version: 0.3.1
+extension_version: 0.3.2
 timestamp: 2026-05-04T05:04:34Z
 ---
 ```
+
+> **Note:** label values are always quoted strings. Bare `yes` and `no` would be parsed as YAML booleans by most parsers — not what you want when the value is meant to be the literal string `"yes"` / `"no"`. The agent writes them quoted; readers can `yaml.safe_load` and get strings.
+
+The `peer_labels` field records every participant's individual outcome — useful for grepping across `.specify/council/` history to see how often your peers actually disagreed (the question that determines whether the council is adding signal beyond a single careful review).
 
 `council_label: degraded` means a provider failed or quorum was not reached — the run did not produce a trustworthy verdict and the artifact is informational only.
 

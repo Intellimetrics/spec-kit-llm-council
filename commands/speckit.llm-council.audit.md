@@ -82,15 +82,22 @@ Audit can be run repeatedly, so the evidence file is **timestamped** (unlike the
 
 Path: `.specify/council/<feature>/audit-<YYYYMMDD-HHMMSS>.md`
 
+Populate `peer_labels:` with one entry per participant: the recommendation label (`"yes"` / `"no"` / `"tradeoff"`) if the peer succeeded and produced one, else `"unlabeled"` / `"timeout"` / `"error"`. **Always write values as quoted strings** — bare `yes` and `no` are YAML booleans. Don't omit failed peers — visible disagreement (and visible failures) are the point of recording this. The `council_label:` field above must be quoted for the same reason.
+
 Format:
 
 ```markdown
 ---
 feature: <feature>
 gate: audit
-council_label: yes | no | tradeoff | degraded
+council_label: "yes" | "no" | "tradeoff" | "degraded"   # always quote; bare yes/no are YAML booleans
 quorum: <int>
 participants: [claude, codex, gemini, ...]
+peer_labels:
+  claude: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  codex: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  gemini: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  # ... one entry per participant; quote every value
 mode: <mode>
 artifacts_reviewed: [spec.md, plan.md]   # whatever was actually included
 transcript: <path under .llm-council/runs/>

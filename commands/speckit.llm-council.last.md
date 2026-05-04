@@ -48,6 +48,7 @@ Parse the YAML frontmatter of the chosen evidence file. Extract:
 - `council_label` (`yes` / `no` / `tradeoff` / `degraded`)
 - `quorum`
 - `participants` (count for the inline summary)
+- `peer_labels` (mapping of peer → label; may be absent in evidence written by extension < 0.3.2)
 - `mode`
 - `transcript`
 - `timestamp`
@@ -75,6 +76,20 @@ Format:
 [council] Evidence: .specify/council/<feature>/<filename>
 [council] Transcript: <transcript>
 ```
+
+If `peer_labels` is present in the frontmatter, append a per-peer breakdown so the user can see how split the verdict was. The dissent (or its absence) is itself the signal worth surfacing:
+
+```
+[council] peer breakdown:
+[council]   claude:           no
+[council]   codex:            tradeoff
+[council]   gemini:           timeout
+[council]   deepseek_v4_pro:  error
+```
+
+If every successful peer produced the same label, lead the breakdown with `[council] (peers agreed unanimously)` so unanimous agreement is also flagged — it's worth knowing when the council added no decorrelation signal.
+
+If the evidence file was written by extension version `< 0.3.2`, `peer_labels` will be absent. Skip the breakdown silently rather than warning.
 
 If `stale: true`, append:
 

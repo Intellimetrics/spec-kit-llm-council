@@ -60,15 +60,22 @@ If the run fails (provider down, no API keys, quorum below `min_quorum`), record
 
 Write to `.specify/council/<feature>/implement-review.md` (sibling to `plan-review.md`). Substitute `{feature}` and `<extension_version>` (read from `.specify/extensions/llm-council/extension.yml` `extension.version`).
 
+Populate `peer_labels:` with one entry per participant: the recommendation label (`"yes"` / `"no"` / `"tradeoff"`) if the peer succeeded and produced one, else `"unlabeled"` / `"timeout"` / `"error"`. **Always write values as quoted strings** — bare `yes` and `no` are YAML booleans. Don't omit failed peers — visible disagreement (and visible failures) are the point of recording this. The `council_label:` field above must be quoted for the same reason.
+
 Format:
 
 ```markdown
 ---
 feature: <feature>
 gate: before_implement
-council_label: yes | no | tradeoff | degraded
+council_label: "yes" | "no" | "tradeoff" | "degraded"   # always quote; bare yes/no are YAML booleans
 quorum: <int>
 participants: [claude, codex, gemini, ...]
+peer_labels:
+  claude: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  codex: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  gemini: "yes" | "no" | "tradeoff" | "unlabeled" | "timeout" | "error"
+  # ... one entry per participant; quote every value
 mode: <mode>
 transcript: <path under .llm-council/runs/>
 extension_version: <extension_version>

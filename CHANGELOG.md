@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] — 2026-05-04
+
+### Added
+
+- **`peer_labels:` field in evidence frontmatter.** Every review and audit evidence file now records each participant's individual outcome (`yes` / `no` / `tradeoff` for successful labels; `unlabeled` / `timeout` / `error` for failures). Failed peers are recorded too — the failure itself is signal worth keeping.
+- **`speckit.llm-council.last` surfaces the per-peer breakdown.** The inline summary now includes "peer breakdown" when the evidence file has `peer_labels`, so the user can see at a glance how split (or unanimous) the verdict was. Unanimous outcomes are flagged explicitly so users notice when the council added no decorrelation signal.
+
+### Why this matters
+
+External feedback flagged that the README's "consensus" framing oversold what a multi-LLM jury actually delivers, because frontier models share a lot of training data and RLHF patterns. The v0.3.1 patch added a "Limitations" section acknowledging this; v0.3.2 makes it measurable. With `peer_labels` recorded per run, a user can:
+
+```bash
+grep -h "peer_labels:" -A 10 .specify/council/*/*.md | sort | uniq -c
+```
+
+…to see disagreement rates across their actual project history. If peers always agreed on what they were fed, the council was not adding signal beyond a single careful review and `mode: review-cheap` (or a single judge) is the better tool.
+
+### Fixed
+
+- **Latent YAML schema bug.** Evidence templates wrote `council_label: yes` and similar bare values, which YAML 1.1 parsers (including Python's `yaml.safe_load`) interpret as the boolean `True` rather than the string `"yes"`. This was harmless when humans read the file as text but broke programmatic parsing. All label values in evidence frontmatter are now quoted strings (`council_label: "yes"`, `peer_labels: claude: "no"`, etc.). Caught by the rigor pass that prompted v0.3.2.
+
+### Backwards compatibility
+
+Evidence files written by `extension_version < 0.3.2` do not have `peer_labels`. The `last` command skips the per-peer breakdown silently in that case rather than warning. Pre-v0.3.2 files with bare `council_label: yes` deserialize to `True` in YAML parsers — `last` reads the file as text and surfaces the verdict regardless, so this manifests only when external tooling parses old evidence. No migration script; the issue self-corrects on the next council run that writes a new evidence file.
+
 ## [0.3.1] — 2026-05-04
 
 ### Fixed
