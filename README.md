@@ -1,35 +1,69 @@
 # spec-kit-llm-council
 
-Multi-LLM consensus jury for [Spec-Driven Development](https://github.com/github/spec-kit). Convenes a parallel jury at high-blast-radius gates (`before_tasks` and `before_implement`), records advisory verdicts as durable evidence, and ships read-only commands to preview cost and recall the last verdict without re-running the council.
+**A code-review jury for AI-driven development workflows.** When you use Spec Kit to drive a coding agent through "spec → plan → tasks → implement," this extension pauses at the high-leverage moments and asks a panel of LLMs to weigh in *before* the agent commits to a path that compounds expensively.
 
-## What it does
+If you've never heard of Spec Kit or `llm-council`, read the next two sections first. If you've used both, jump to [Install](#install).
 
-Wires [`llm-council`](https://github.com/Intellimetrics/llm-council) into the SDD lifecycle at two gates:
+## What you need to know first
 
-- **`before_tasks`** — review `plan.md` before task decomposition. Catches design flaws, missing acceptance criteria, and requirements drift before they compound through 30+ generated tasks.
-- **`before_implement`** — review `tasks.md` against the plan before code generation. Catches plan-to-tasks drift: missing tasks, phantom tasks, hidden complexity, sequencing risks.
+This tool is glue between two existing tools.
 
-At each gate, spec-kit surfaces an optional-hook prompt to the host agent (Claude Code, Codex, Gemini, etc.). The agent asks you whether to convene the council; if you accept, multiple models read the relevant artifacts and each casts a verdict (`yes` / `no` / `tradeoff`). Aggregated label, dissent, and full transcript land at `.specify/council/<feature>/<gate>-review.md` as an audit artifact.
+### 1. Spec Kit
 
-The verdict is **always advisory** — nothing blocks the SDD lifecycle. You read the summary and decide whether to proceed, refine, or override.
+[GitHub Spec Kit](https://github.com/github/spec-kit) is GitHub's open-source toolkit for **Spec-Driven Development** — driving an AI coding agent (Claude Code, Codex, Gemini, Cursor, etc.) through structured phases instead of one-shot prompting. The agent walks a pipeline:
 
-## Why a jury?
+```
+/speckit.constitution → /speckit.specify → /speckit.plan → /speckit.tasks → /speckit.implement
+```
 
-A single model reviewing its own work often rationalizes its choices. Independent models with different training distributions catch different failure modes. The jury pattern is most valuable at high-blast-radius gates — places where a wrong call compounds expensively (a flawed plan generates 30+ flawed tasks; a flawed task list generates correspondingly bad code).
+Each step is a slash command and produces a markdown artifact in `specs/<feature>/`: a constitution (project principles), a spec (what to build), a plan (how), a task list (decomposed work), and finally implemented code. Spec Kit installs into your repo as a `.specify/` directory plus per-agent skills (e.g., `.claude/skills/`).
+
+If you haven't installed Spec Kit yet, **[start there](https://github.com/github/spec-kit)**. This extension only makes sense once you've seen that workflow.
+
+### 2. `llm-council`
+
+[`llm-council`](https://github.com/Intellimetrics/llm-council) is a separate tool that asks multiple LLMs the same question in parallel and aggregates their verdicts. It's a CLI and an [MCP](https://modelcontextprotocol.io/) server. You give it a question and some context files; it spawns Claude, Codex, Gemini, and any other LLMs you've configured (OpenRouter peers, OpenAI-compatible endpoints, local Ollama models); each model returns a verdict (`yes` / `no` / `tradeoff`); `llm-council` aggregates them with quorum rules and writes a transcript.
+
+The point: independent models with different training data, different priors, and different failure modes catch things any single model misses.
+
+### 3. This extension
+
+`spec-kit-llm-council` registers two hooks in the Spec Kit lifecycle:
+
+- **Before `/speckit.tasks` runs** (the `before_tasks` gate) — it offers to convene the council to review your `plan.md`. A flawed plan compounds into 30+ flawed tasks; catching it here is cheap.
+- **Before `/speckit.implement` runs** (the `before_implement` gate) — it offers to convene the council to review `tasks.md` against the plan. A flawed task list generates correspondingly bad code.
+
+When the council runs, it writes its verdict to `.specify/council/<feature>/<gate>-review.md` as a durable audit artifact in your repo, and prints a summary to your agent's session. The verdict is **always advisory** — nothing blocks the SDD lifecycle. You read the summary and decide.
+
+Two extra read-only commands ship alongside: `dry-run` (preview cost and which peers will succeed *before* spending tokens) and `last` (recall the most recent verdict for a feature without re-running the council).
+
+## Why this exists
+
+When an AI agent writes a plan and then implements that plan, errors compound silently. Small misunderstandings at the planning stage become structural bugs at the implementation stage, and by the time the issue surfaces you've spent significant tokens and hours. The same model that wrote the plan tends to *rationalize* the choices it made when reviewing them — so single-model review catches less than you'd expect.
+
+A panel of models — with different training data, different priors, different failure modes — catches things one model misses. That's the value of the jury pattern at decision-point gates, rather than as a general code-review tool.
 
 ## Install
 
+You'll install two things: the `llm-council` tool itself, and this Spec Kit extension that wires it into your project.
+
 ```bash
-# 1. Install the underlying llm-council tool (one-time, system-wide)
+# 1. Install the llm-council tool (one-time, system-wide).
+#    This gives you the `llm-council` CLI and the MCP server binary.
 uv tool install llm-council
 
-# 2. Install the spec-kit extension
+# 2. Install this extension into your spec-kit project.
+#    Run this from inside your spec-kit-initialized repo.
 specify extension add llm-council
 ```
 
+If you don't yet have Spec Kit installed (i.e., the `specify` command isn't on your `PATH`), [install it first](https://github.com/github/spec-kit).
+
 ## Choose your participants
 
-The council is **bring-your-own-models**. You decide who sits on the jury — from one model up to a dozen — by configuring `.llm-council.yaml` in your project (or accepting `llm-council`'s defaults). The extension doesn't care how many or which; it invokes whatever you've set up.
+The council is **bring-your-own-models**. You decide who sits on the jury — from one model up to a dozen — by configuring `.llm-council.yaml` in your project root (or accepting `llm-council`'s built-in defaults). This extension doesn't care how many or which models; it invokes whatever you've set up.
+
+> Note: `.llm-council.yaml` is the **`llm-council` tool's** configuration (which models, which modes, which API endpoints). It's separate from this extension's configuration at `.specify/extensions/llm-council/llm-council-config.yml` (which controls how this extension *uses* `llm-council` — cost cap, evidence-file location, prompt knobs). You'll typically touch the extension config first; only edit `.llm-council.yaml` if you want to add custom peers or change the jury composition.
 
 | Source | Examples | Setup |
 |---|---|---|
