@@ -28,14 +28,19 @@ The point: independent models with different training data, different priors, an
 
 ### 3. This extension
 
-`spec-kit-llm-council` registers two hooks in the Spec Kit lifecycle:
+`spec-kit-llm-council` registers three hooks in the Spec Kit lifecycle, plus a few extra commands:
 
+- **After `/speckit.specify` runs** (the `after_specify` gate) — it offers to convene the council to review your fresh `spec.md`. Catches the upstream poison case: a flawed spec compounds through plan + tasks + code, and by the time later gates fire the bad framing is already inherited.
 - **Before `/speckit.tasks` runs** (the `before_tasks` gate) — it offers to convene the council to review your `plan.md`. A flawed plan compounds into 30+ flawed tasks; catching it here is cheap.
 - **Before `/speckit.implement` runs** (the `before_implement` gate) — it offers to convene the council to review `tasks.md` against the plan. A flawed task list generates correspondingly bad code.
 
 When the council runs, it writes its verdict to `.specify/council/<feature>/<gate>-review.md` as a durable audit artifact in your repo, and prints a summary to your agent's session. The verdict is **always advisory** — nothing blocks the SDD lifecycle. You read the summary and decide.
 
-Two extra read-only commands ship alongside: `dry-run` (preview cost and which peers will succeed *before* spending tokens) and `last` (recall the most recent verdict for a feature without re-running the council).
+Three additional commands ship alongside the hook commands:
+
+- **`audit`** — runs the council against whatever artifacts exist in `.specify/` at any time, outside the lifecycle gates. Use for ad-hoc reviews when you land mid-stream.
+- **`dry-run`** — previews the council prompt, peer set, projected cost, and which peers will succeed in your environment, without spending any tokens.
+- **`last`** — prints the most recent verdict for the active feature without re-running the council; warns if the inputs have changed since the verdict was recorded.
 
 ## Why this exists
 
@@ -98,20 +103,22 @@ Council transcripts always land in `.llm-council/runs/` regardless of posture. A
 
 ## Commands
 
-Four commands ship in v0.2.0. All four are read-only relative to source files; only the two review commands convene the council and spend tokens.
+Six commands ship in v0.3.0. The four review/audit commands convene the council and spend tokens; `dry-run` and `last` are read-only.
 
 | Command | Purpose | Spends tokens? |
 |---|---|---|
+| `speckit.llm-council.spec-review` | Convene jury on `spec.md` (fired automatically at the `after_specify` gate) | Yes |
 | `speckit.llm-council.plan-review` | Convene jury on `plan.md` (fired automatically at the `before_tasks` gate) | Yes |
 | `speckit.llm-council.implement-review` | Convene jury on `tasks.md` against `plan.md` (fired automatically at the `before_implement` gate) | Yes |
-| `speckit.llm-council.dry-run` | Preview prompt + cost + peer-readiness diagnostics for either gate | No |
-| `speckit.llm-council.last` | Print the last recorded verdict for the active feature; warns if `plan.md`/`spec.md` changed since | No |
+| `speckit.llm-council.audit` | Run the council against the current `.specify/` state at any time, outside the lifecycle gates | Yes |
+| `speckit.llm-council.dry-run` | Preview prompt + cost + peer-readiness diagnostics for any gate | No |
+| `speckit.llm-council.last` | Print the last recorded verdict for the active feature; warns if `spec.md`/`plan.md` changed since | No |
 
-All four take an optional feature-slug argument (e.g., `... 003-user-auth`) to override branch-based active-feature resolution.
+All six take an optional feature-slug argument (e.g., `... 003-user-auth`) to override branch-based active-feature resolution.
 
 ## Usage
 
-When you run `/speckit.tasks` or `/speckit.implement` (or their equivalents in your integration), spec-kit surfaces a notice to the host agent in this format:
+When you run `/speckit.specify`, `/speckit.tasks`, or `/speckit.implement` (or their equivalents in your integration), spec-kit surfaces a notice to the host agent in this format:
 
 ```
 **Optional Hook**: llm-council
@@ -201,8 +208,10 @@ Each gate writes to its own evidence file under `.specify/council/<feature>/`:
 
 | Gate | Evidence file | Source command |
 |---|---|---|
+| `after_specify` | `spec-review.md` | `speckit.llm-council.spec-review` |
 | `before_tasks` | `plan-review.md` | `speckit.llm-council.plan-review` |
 | `before_implement` | `implement-review.md` | `speckit.llm-council.implement-review` |
+| (any time) | `audit-<YYYYMMDD-HHMMSS>.md` | `speckit.llm-council.audit` |
 
 ```yaml
 ---
@@ -222,13 +231,24 @@ timestamp: 2026-05-04T05:04:34Z
 
 ## Not planned
 
-These came up during planning and are explicitly out of scope. They will not appear in a future "deferred" roadmap:
+These came up during planning and are explicitly out of scope. They will not appear in a future "deferred" roadmap. The hook surface caps at three; any future proposal for a fourth hook must come with a kill of one of the existing three.
 
-- **`before_analyze` hook (post-implementation review).** Reviewing already-written code overlaps with `/speckit.analyze`. The council adds the most leverage *before* expensive work, not after.
+**Hooks that won't be added:**
+
+- **`before_analyze` / `after_implement` (post-implementation review).** Reviewing already-written code overlaps with `/speckit.analyze`. The council adds the most leverage *before* expensive work, not after. Re-confirmed cut in v0.3.0 planning.
+- **`after_clarify`.** `/speckit.clarify` is itself structured Q&A; council review of its output is meta-on-meta.
+- **`before_constitution` / `after_constitution`.** Constitution is set rarely; ROI per token is too low.
+- **`before_checklist` / `after_checklist`.** Reviewing a quality checklist is meta and low-signal.
+- **`before_taskstoissues`.** Task list is already gated by `before_implement`; a second pass is redundant.
+
+**Other features that won't ship:**
+
 - **Optional blocking semantics.** Advisory-only is the design's load-bearing safety property. Promising blocking invites scope creep into escape-hatch UX (`--force` flags, env overrides, config precedence).
 - **Profiles (`micro` / `compact` / `full`).** Adds configuration surface for what the existing `mode:` config already provides via llm-council.
 - **CI / manifest validation.** Solo-maintainer overhead; catalog submission validation handles the same concern.
 - **Multi-feature project handling.** Single-feature project + explicit slug argument covers the realistic use cases. The deterministic resolver fails closed when it can't decide.
+- **Spec Kit presets integration.** Speculative; would commit to a value-add we can't yet articulate.
+- **Spec Kit workflow integration.** Feature does not yet exist in spec-kit; can't design against vapor.
 
 ## License
 

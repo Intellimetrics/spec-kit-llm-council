@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] — 2026-05-04
+
+### Added
+
+- **`after_specify` hook + `speckit.llm-council.spec-review` command** — convene the jury *after* `/speckit.specify` writes the spec, *before* `/speckit.plan` operates on it. Catches the upstream poison case: a flawed spec compounds through plan + tasks + code, and by the time `before_tasks` fires the bad framing is already inherited. Council reviews acceptance-criteria gaps, hidden assumptions, scope ambiguity, wrong-problem framing, and constitution-alignment gaps. Evidence at `.specify/council/<feature>/spec-review.md`.
+- **`speckit.llm-council.audit` command** — standalone, non-hook command that runs the council against whatever artifacts currently exist for the active feature. Question adapts to what's present (spec only / spec + plan / spec + plan + tasks). Use case: "I'm mid-stream and want a sanity check on my current state without waiting for a lifecycle gate." Audits can be run repeatedly; each writes a timestamped evidence file at `.specify/council/<feature>/audit-<YYYYMMDD-HHMMSS>.md`.
+
+### Hook surface caps at 3
+
+The extension now registers three hooks (`after_specify`, `before_tasks`, `before_implement`). **This is the ceiling.** Any future proposal for a fourth hook must come with a kill of one of these three — hook count is itself a budget. Adding more lifecycle gates beyond the three highest-blast-radius transitions trades signal for noise.
+
+### Not planned (added to the existing kill list)
+
+The following were considered for v0.3.0 and explicitly rejected. They will not return as "deferred":
+
+- **`after_clarify` hook** — `/speckit.clarify` is itself structured Q&A; council review of its output is meta-on-meta.
+- **`before_constitution` / `after_constitution` hooks** — constitution is set rarely (once per project); ROI per token is too low to justify a registered hook.
+- **`before_checklist` / `after_checklist` hooks** — reviewing a quality checklist is meta and low-signal.
+- **`before_taskstoissues` hook** — task list is already gated by `before_implement`; a second pass is redundant.
+- **Reopening `before_analyze`** — already cut in v0.2.0 with the rationale that it overlaps `/speckit.analyze`. The v0.3.0 council pass surfaced no new evidence; re-confirmed cut.
+- **Spec Kit presets integration** — speculative; would commit to a value-add we can't yet articulate.
+- **Spec Kit workflow integration** — feature does not yet exist in spec-kit; can't design against vapor.
+
+### Requires
+- `llm-council >= 0.4.2` (unchanged from v0.2.0).
+- `spec-kit >= 0.2.0` (unchanged).
+
 ## [0.2.0] — 2026-05-04
 
 ### Added

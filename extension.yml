@@ -3,8 +3,8 @@ schema_version: "1.0"
 extension:
   id: "llm-council"
   name: "LLM Council"
-  version: "0.2.0"
-  description: "Multi-LLM consensus jury for Spec-Driven Development. Convenes a parallel jury at the before_tasks and before_implement gates; records advisory verdicts as evidence. Includes dry-run preview and last-verdict recall commands."
+  version: "0.3.0"
+  description: "Multi-LLM consensus jury for Spec-Driven Development. Convenes a parallel jury at three gates (after_specify, before_tasks, before_implement); records advisory verdicts as evidence. Includes dry-run preview, last-verdict recall, and standalone audit commands."
   author: "Chad Lindell"
   repository: "https://github.com/Intellimetrics/spec-kit-llm-council"
   license: "MIT"
@@ -19,12 +19,18 @@ requires:
 
 provides:
   commands:
+    - name: "speckit.llm-council.spec-review"
+      file: "commands/speckit.llm-council.spec-review.md"
+      description: "Convene the council after /speckit.specify to review the spec for acceptance criteria, hidden assumptions, and right-problem framing"
     - name: "speckit.llm-council.plan-review"
       file: "commands/speckit.llm-council.plan-review.md"
       description: "Convene a multi-LLM jury to review the active feature's plan.md and record an advisory verdict"
     - name: "speckit.llm-council.implement-review"
       file: "commands/speckit.llm-council.implement-review.md"
       description: "Convene the council before /speckit.implement to review whether the tasks faithfully decompose the plan"
+    - name: "speckit.llm-council.audit"
+      file: "commands/speckit.llm-council.audit.md"
+      description: "Run the council against the active feature's current .specify/ artifacts at any time, outside the standard lifecycle gates"
     - name: "speckit.llm-council.dry-run"
       file: "commands/speckit.llm-council.dry-run.md"
       description: "Preview the council prompt, peer set, and cost estimate without spending tokens"
@@ -39,6 +45,11 @@ provides:
       required: false
 
 hooks:
+  after_specify:
+    command: speckit.llm-council.spec-review
+    optional: true
+    prompt: "Convene LLM council to review the spec before planning?"
+    description: "Multi-model consensus review of spec.md before /speckit.plan"
   before_tasks:
     command: speckit.llm-council.plan-review
     optional: true
