@@ -3,8 +3,8 @@ schema_version: "1.0"
 extension:
   id: "llm-council"
   name: "LLM Council"
-  version: "0.1.0"
-  description: "Multi-LLM consensus jury for Spec-Driven Development. Convenes a parallel jury of models to vote on plan.md before task generation; records an advisory verdict as evidence."
+  version: "0.2.0"
+  description: "Multi-LLM consensus jury for Spec-Driven Development. Convenes a parallel jury at the before_tasks and before_implement gates; records advisory verdicts as evidence. Includes dry-run preview and last-verdict recall commands."
   author: "Chad Lindell"
   repository: "https://github.com/Intellimetrics/spec-kit-llm-council"
   license: "MIT"
@@ -22,6 +22,15 @@ provides:
     - name: "speckit.llm-council.plan-review"
       file: "commands/speckit.llm-council.plan-review.md"
       description: "Convene a multi-LLM jury to review the active feature's plan.md and record an advisory verdict"
+    - name: "speckit.llm-council.implement-review"
+      file: "commands/speckit.llm-council.implement-review.md"
+      description: "Convene the council before /speckit.implement to review whether the tasks faithfully decompose the plan"
+    - name: "speckit.llm-council.dry-run"
+      file: "commands/speckit.llm-council.dry-run.md"
+      description: "Preview the council prompt, peer set, and cost estimate without spending tokens"
+    - name: "speckit.llm-council.last"
+      file: "commands/speckit.llm-council.last.md"
+      description: "Print the last recorded council verdict for the active feature without re-convening the jury"
 
   config:
     - name: "llm-council-config.yml"
@@ -35,6 +44,11 @@ hooks:
     optional: true
     prompt: "Convene LLM council to review the plan before task generation?"
     description: "Multi-model consensus review of plan.md before /speckit.tasks"
+  before_implement:
+    command: speckit.llm-council.implement-review
+    optional: true
+    prompt: "Convene LLM council to review tasks against plan before implementation?"
+    description: "Multi-model consensus review of tasks.md against plan.md before /speckit.implement"
 
 tags:
   - "review"

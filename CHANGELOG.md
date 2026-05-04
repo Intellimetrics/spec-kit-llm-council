@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] — 2026-05-04
+
+### Added
+
+- **`before_implement` hook** + **`speckit.llm-council.implement-review` command** — convene the jury after `/speckit.tasks` to review whether the generated task list faithfully decomposes the plan. Catches missing tasks, phantom tasks, hidden complexity, sequencing risks, and constitution violations baked into decomposition. Evidence at `.specify/council/<feature>/implement-review.md`. Same advisory-only invariant as plan-review.
+- **`speckit.llm-council.dry-run` command** — preview the council prompt, peer set, projected cost, and peer-readiness diagnostics (trusted-directory issues, missing API keys, missing CLIs, Ollama daemon status) without spending any tokens. Surfaces would-be-degraded runs so users can fix the environment before running for real.
+- **`speckit.llm-council.last` command** — print the most recent council verdict for the active feature without re-convening the jury. Includes a stale-evidence check that warns if `plan.md` or `spec.md` has been modified since the verdict was recorded.
+
+### Behavior
+
+- v0.2.0 commands all reuse the deterministic active-feature resolver from v0.1.0 (strip common branch prefixes, fail closed on ambiguity, accept explicit slug as `$ARGUMENTS`).
+
+### Not planned (decisively cut, not deferred)
+
+These came up in v0.2.0 planning and are explicitly declared out of scope. They will not appear in a future "deferred" section:
+
+- **`before_analyze` hook** — pre-implementation gates (plan-review, implement-review) are where jury input adds the most leverage. Reviewing already-written code overlaps with `/speckit.analyze`, which is a single-model but structured pass and adequate for that purpose.
+- **Optional blocking semantics** — advisory-only is the design's load-bearing safety property. Promising opt-in blocking invites scope creep into escape-hatch UX (`--force`, env overrides, config precedence) and would compromise the "you decide" stance.
+- **Profiles (`micro` / `compact` / `full`)** — adds configuration surface for a depth tradeoff that the existing `mode:` config already provides via llm-council's mode system.
+- **CI / manifest validation** — out of scope for a solo-maintained extension. Catalog submission validation handles the same concern at the right layer.
+- **Cap-raise UX with explicit confirmation** — the prose-level "do not silently override" guidance has held; verdict cap is informational and the agent surfaces estimate exceedances naturally.
+- **Multi-feature project handling** — single-feature project + explicit slug argument covers the realistic use cases.
+
+### Requires
+- `llm-council >= 0.4.2` (unchanged from v0.1.0).
+- `spec-kit >= 0.2.0` (unchanged).
+
 ## [0.1.0] — 2026-05-04
 
 Initial release.

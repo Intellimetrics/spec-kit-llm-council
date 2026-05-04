@@ -1,16 +1,21 @@
 # spec-kit-llm-council
 
-Multi-LLM consensus jury for [Spec-Driven Development](https://github.com/github/spec-kit). Convenes a parallel jury of models to vote on `plan.md` before `/speckit.tasks` runs, and records the verdict as durable evidence.
+Multi-LLM consensus jury for [Spec-Driven Development](https://github.com/github/spec-kit). Convenes a parallel jury at high-blast-radius gates (`before_tasks` and `before_implement`), records advisory verdicts as durable evidence, and ships read-only commands to preview cost and recall the last verdict without re-running the council.
 
 ## What it does
 
-Wires [`llm-council`](https://github.com/Intellimetrics/llm-council) into the SDD lifecycle. At the `before_tasks` gate, spec-kit surfaces an optional-hook prompt to the host agent (Claude Code, Codex, Gemini, etc.). The agent asks you whether to convene the council; if you accept, multiple models read the active feature's `plan.md`, `spec.md`, and constitution and each casts a verdict (`yes` / `no` / `tradeoff`). Their aggregated label, dissent, and full transcript land at `.specify/council/<feature>/plan-review.md` as an audit artifact.
+Wires [`llm-council`](https://github.com/Intellimetrics/llm-council) into the SDD lifecycle at two gates:
 
-The verdict is **advisory only** — nothing blocks `/speckit.tasks`. You read the summary and decide whether to proceed, refine the plan, or override.
+- **`before_tasks`** — review `plan.md` before task decomposition. Catches design flaws, missing acceptance criteria, and requirements drift before they compound through 30+ generated tasks.
+- **`before_implement`** — review `tasks.md` against the plan before code generation. Catches plan-to-tasks drift: missing tasks, phantom tasks, hidden complexity, sequencing risks.
+
+At each gate, spec-kit surfaces an optional-hook prompt to the host agent (Claude Code, Codex, Gemini, etc.). The agent asks you whether to convene the council; if you accept, multiple models read the relevant artifacts and each casts a verdict (`yes` / `no` / `tradeoff`). Aggregated label, dissent, and full transcript land at `.specify/council/<feature>/<gate>-review.md` as an audit artifact.
+
+The verdict is **always advisory** — nothing blocks the SDD lifecycle. You read the summary and decide whether to proceed, refine, or override.
 
 ## Why a jury?
 
-A single model reviewing a plan often rationalizes its own design choices. Independent models with different training distributions catch different failure modes. The jury pattern is most valuable at high-blast-radius gates: `before_tasks` is one such gate, because plan flaws compound through 30+ generated tasks before they're caught.
+A single model reviewing its own work often rationalizes its choices. Independent models with different training distributions catch different failure modes. The jury pattern is most valuable at high-blast-radius gates — places where a wrong call compounds expensively (a flawed plan generates 30+ flawed tasks; a flawed task list generates correspondingly bad code).
 
 ## Install
 
@@ -57,9 +62,22 @@ By default the council runs `mode: plan`, which sends the active feature's `spec
 
 Council transcripts always land in `.llm-council/runs/` regardless of posture. Add that directory to your project's `.gitignore` if you don't want transcripts committed.
 
+## Commands
+
+Four commands ship in v0.2.0. All four are read-only relative to source files; only the two review commands convene the council and spend tokens.
+
+| Command | Purpose | Spends tokens? |
+|---|---|---|
+| `speckit.llm-council.plan-review` | Convene jury on `plan.md` (fired automatically at the `before_tasks` gate) | Yes |
+| `speckit.llm-council.implement-review` | Convene jury on `tasks.md` against `plan.md` (fired automatically at the `before_implement` gate) | Yes |
+| `speckit.llm-council.dry-run` | Preview prompt + cost + peer-readiness diagnostics for either gate | No |
+| `speckit.llm-council.last` | Print the last recorded verdict for the active feature; warns if `plan.md`/`spec.md` changed since | No |
+
+All four take an optional feature-slug argument (e.g., `... 003-user-auth`) to override branch-based active-feature resolution.
+
 ## Usage
 
-Spec-kit registers `before_tasks` as an optional hook. When you run `/speckit.tasks` (or its equivalent in your integration), spec-kit surfaces a notice to the host agent in this format:
+When you run `/speckit.tasks` or `/speckit.implement` (or their equivalents in your integration), spec-kit surfaces a notice to the host agent in this format:
 
 ```
 **Optional Hook**: llm-council
@@ -74,7 +92,7 @@ The agent typically asks you, then invokes the command if you confirm. (Some age
 
 The literal `<invocation>` depends on your spec-kit integration mode:
 
-| Integration | Invocation |
+| Integration | Invocation (for `plan-review`; rename `plan-review` to the command you want) |
 |---|---|
 | Claude Code (skills mode, default) | `/speckit-llm-council-plan-review` |
 | Codex CLI (skills mode) | `$speckit-llm-council-plan-review` |
@@ -83,9 +101,9 @@ The literal `<invocation>` depends on your spec-kit integration mode:
 | Claude Code / Codex (legacy commands, no skills) | `/speckit.llm-council.plan-review` |
 | Gemini, Copilot, Windsurf, and other non-skill agents | `/speckit.llm-council.plan-review` |
 
-You can also bypass the hook and invoke the command directly at any time using whichever invocation form your integration uses.
+You can bypass the hooks and invoke any command directly at any time using whichever invocation form your integration uses.
 
-When the council runs, it reads the active feature's plan, casts verdicts, writes evidence to `.specify/council/<feature>/plan-review.md`, and prints an inline summary:
+When a review command runs, the council reads the relevant artifacts, casts verdicts, writes evidence, and prints an inline summary:
 
 ```
 [council] before_tasks gate — verdict: yes (4/4)
@@ -93,7 +111,38 @@ When the council runs, it reads the active feature's plan, casts verdicts, write
 [council] Evidence: .specify/council/003-user-auth/plan-review.md
 ```
 
-The hook is **always advisory**: nothing blocks `/speckit.tasks`. A `no` or `tradeoff` verdict is information, not a stop sign — you decide whether to refine the plan or proceed.
+The hooks are **always advisory**: nothing blocks `/speckit.tasks` or `/speckit.implement`. A `no` or `tradeoff` verdict is information, not a stop sign — you decide whether to refine or proceed.
+
+### Preview without spending tokens
+
+Run `dry-run` to see exactly what the council would be asked, which peers will succeed in your current environment, and the projected cost — without convening the jury:
+
+```
+[council] dry-run for 003-user-auth (mode: plan)
+[council] participants: claude, codex, gemini, deepseek_v4_pro
+[council] inputs:
+[council]   spec.md       (542 chars)  ✓
+[council]   plan.md       (612 chars)  ✓
+[council]   constitution  (3041 chars) ✓
+[council] prompt total: ~877 tokens
+[council] estimated cost: $0.0017 (cap: $0.50) ✓ under cap
+[council] peer readiness:
+[council]   gemini             ✗ not in a trusted directory (set GEMINI_CLI_TRUST_WORKSPACE=true)
+[council] effective quorum: 3/4 (min: 2) — will meet quorum
+```
+
+### Recall the last verdict
+
+Run `last` to surface the most recent verdict for the active feature without re-running:
+
+```
+[council] last verdict for 003-user-auth — yes (4/4)
+[council] Plan is consistent with spec; minor gap on acceptance criteria for §3.2.
+[council] Recorded: 2026-05-04T05:04:34Z (gate: before_tasks, mode: plan)
+[council] Evidence: .specify/council/003-user-auth/plan-review.md
+```
+
+If `plan.md` or `spec.md` has been modified since the verdict was recorded, `last` prints a stale-evidence warning so you know to re-run the council.
 
 ## Configuration
 
@@ -114,30 +163,38 @@ Environment overrides for one-off runs:
 
 ## Evidence schema
 
+Each gate writes to its own evidence file under `.specify/council/<feature>/`:
+
+| Gate | Evidence file | Source command |
+|---|---|---|
+| `before_tasks` | `plan-review.md` | `speckit.llm-council.plan-review` |
+| `before_implement` | `implement-review.md` | `speckit.llm-council.implement-review` |
+
 ```yaml
 ---
 feature: 003-user-auth
-gate: before_tasks
+gate: before_tasks                          # or before_implement
 council_label: yes | no | tradeoff | degraded
 quorum: 4
 participants: [claude, codex, gemini, deepseek_v4_pro]
 mode: plan
 transcript: .llm-council/runs/20260504_050434_plan-review.md
-extension_version: 0.1.0
+extension_version: 0.2.0
 timestamp: 2026-05-04T05:04:34Z
 ---
 ```
 
 `council_label: degraded` means a provider failed or quorum was not reached — the run did not produce a trustworthy verdict and the artifact is informational only.
 
-## Roadmap
+## Not planned
 
-v0.1.0 deliberately ships one hook, one command, and advisory verdicts. Candidates for v0.2.0 (driven by real-world usage):
+These came up during planning and are explicitly out of scope. They will not appear in a future "deferred" roadmap:
 
-- `before_implement` and `before_analyze` hooks
-- Compact-first input packaging (briefs + diff excerpts) to reduce token spend
-- Profiles (`micro` / `compact` / `full`) for varying depth
-- Optional blocking semantics with a documented escape hatch
+- **`before_analyze` hook (post-implementation review).** Reviewing already-written code overlaps with `/speckit.analyze`. The council adds the most leverage *before* expensive work, not after.
+- **Optional blocking semantics.** Advisory-only is the design's load-bearing safety property. Promising blocking invites scope creep into escape-hatch UX (`--force` flags, env overrides, config precedence).
+- **Profiles (`micro` / `compact` / `full`).** Adds configuration surface for what the existing `mode:` config already provides via llm-council.
+- **CI / manifest validation.** Solo-maintainer overhead; catalog submission validation handles the same concern.
+- **Multi-feature project handling.** Single-feature project + explicit slug argument covers the realistic use cases. The deterministic resolver fails closed when it can't decide.
 
 ## License
 
