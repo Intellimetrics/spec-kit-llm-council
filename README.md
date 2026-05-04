@@ -159,7 +159,7 @@ The hooks are **always advisory**: nothing blocks `/speckit.tasks` or `/speckit.
 Run `dry-run` to see exactly what the council would be asked, which peers will succeed in your current environment, and the projected cost — without convening the jury:
 
 ```
-[council] dry-run for 003-user-auth (mode: plan)
+[council] dry-run for 003-user-auth — gate: plan (mode: plan)
 [council] participants: claude, codex, gemini, deepseek_v4_pro
 [council] inputs:
 [council]   spec.md       (542 chars)  ✓

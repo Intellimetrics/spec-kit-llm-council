@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: "llm-council"
   name: "LLM Council"
-  version: "0.3.0"
+  version: "0.3.1"
   description: "Multi-LLM consensus jury for Spec-Driven Development. Convenes a parallel jury at three gates (after_specify, before_tasks, before_implement); records advisory verdicts as evidence. Includes dry-run preview, last-verdict recall, and standalone audit commands."
   author: "Chad Lindell"
   repository: "https://github.com/Intellimetrics/spec-kit-llm-council"

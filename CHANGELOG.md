@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] — 2026-05-04
+
+### Fixed
+
+- **`dry-run` is now gate-aware.** Previously it built only a `plan-review`-shaped prompt, which broke when invoked early in the SDD lifecycle (when only `spec.md` exists) or when a user wanted to preview `implement-review` or `audit` cost. The command now auto-detects the next applicable gate from the artifacts present (spec only → spec; spec + plan → plan; all three → implement) and accepts an explicit gate keyword in `$ARGUMENTS` (`spec` / `plan` / `implement` / `audit`) to override. The summary header now names which gate was previewed. Caught by post-v0.3.0 mock testing.
+
 ## [0.3.0] — 2026-05-04
 
 ### Added
